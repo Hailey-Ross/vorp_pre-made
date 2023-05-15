@@ -13,6 +13,17 @@ CREATE TABLE IF NOT EXISTS `banks` (
   PRIMARY KEY (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `users` (
+  `identifier` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+  `group` varchar(50) DEFAULT 'user',
+  `warnings` int(11) DEFAULT 0,
+  `banned` tinyint(1) DEFAULT NULL,
+  `banneduntil` int(10) DEFAULT 0,
+  `char` varchar(50) NOT NULL DEFAULT 'false',
+  PRIMARY KEY (`identifier`),
+  UNIQUE KEY `identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE `bank_users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(50) NOT NULL,
@@ -53,16 +64,7 @@ CREATE TABLE IF NOT EXISTS `bills` (
   UNIQUE KEY `id` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `users` (
-  `identifier` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-  `group` varchar(50) DEFAULT 'user',
-  `warnings` int(11) DEFAULT 0,
-  `banned` tinyint(1) DEFAULT NULL,
-  `banneduntil` int(10) DEFAULT 0,
-  `char` varchar(50) NOT NULL DEFAULT 'false',
-  PRIMARY KEY (`identifier`),
-  UNIQUE KEY `identifier` (`identifier`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 CREATE TABLE IF NOT EXISTS `characters` (
   `identifier` varchar(50) COLLATE utf8mb4_bin NOT NULL DEFAULT '',
@@ -206,7 +208,7 @@ CREATE TABLE IF NOT EXISTS `items` (
   `label` varchar(50) NOT NULL,
   `limit` int(11) NOT NULL DEFAULT 1,
   `can_remove` tinyint(1) NOT NULL DEFAULT 1,
-  `type` varchar(50) DEFAULT NULL,
+  `type` VARCHAR(50) NULL DEFAULT 'item_standard' COLLATE 'utf8mb4_general_ci',
   `usable` tinyint(1) DEFAULT NULL,
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `metadata` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT '{}' CHECK (json_valid(`metadata`)),
@@ -236,7 +238,7 @@ CREATE TABLE IF NOT EXISTS `jail` (
 
 CREATE TABLE IF NOT EXISTS `loadout` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `identifier` varchar(50) NOT NULL,
+  `identifier` VARCHAR(50) NOT NULL COLLATE 'utf8mb4_bin',
   `charidentifier` int(11) DEFAULT NULL,
   `name` varchar(50) DEFAULT NULL,
   `ammo` varchar(255) NOT NULL DEFAULT '{}',
@@ -319,13 +321,6 @@ CREATE TABLE IF NOT EXISTS `wagons` (
   KEY `model` (`model`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `wagon_water` (
-  `identifier` varchar(255) COLLATE latin1_general_cs DEFAULT '0',
-  `charid` varchar(255) COLLATE latin1_general_cs DEFAULT '0',
-  `wagon` varchar(255) COLLATE latin1_general_cs DEFAULT '0',
-  `water` varchar(255) COLLATE latin1_general_cs DEFAULT '0',
-  `wagon_name` varchar(50) COLLATE latin1_general_cs DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_general_cs;
 
 CREATE TABLE `whitelist` (
     `id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -343,7 +338,7 @@ CREATE TABLE `whitelist` (
 
 INSERT IGNORE INTO `banks` (`name`) VALUES
 	('Blackwater'),
-	('Saint Denis'),
+	('SaintDenis'),
 	('Valentine');
 
 
