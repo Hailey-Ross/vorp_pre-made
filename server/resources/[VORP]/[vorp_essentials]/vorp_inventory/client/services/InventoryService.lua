@@ -1,18 +1,30 @@
----@type table<string, Item>
+---@diagnostic disable: undefined-global
+---@class  InventoryService @ InventoryService
+---@class Weapon @Weapon
+---@class Item @Item
+---@field PullAllInventory fun():table
+---@field receiveItem fun(name:string, id:string, amount:number, metadata:table)
+---@field removeItem fun(name:string, id:string, count:number)
+---@field receiveWeapon fun(id:string, propietary:string, name:string, ammos:table)
+---@field onSelectedCharacter fun(charId:string)
+---@field processItems fun(items:table)
+---@field getLoadout fun(loadout:table)
+---@field getWeapons fun():table
+---@field getInventory fun(table:table)
+---@field svItems table<string,Item>
+---@field UserWeapons table<string,Weapon>
+---@field UserInventory table<number,Item>
 svItems = {}
+
 InventoryService = {}
 UserWeapons = {}
----@class UserInventory: table<string, Item>
 UserInventory = {}
-bulletsHash = {}
 
-
-InventoryService.PullAllInventory = function ()
-    return UserInventory
+function InventoryService.PullAllInventory()
+	return UserInventory
 end
 
-
-InventoryService.receiveItem = function (name, id, amount, metadata)
+function InventoryService.receiveItem(name, id, amount, metadata)
 	if UserInventory[id] ~= nil then
 		UserInventory[id]:addCount(amount)
 	else
@@ -26,14 +38,14 @@ InventoryService.receiveItem = function (name, id, amount, metadata)
 			type = "item_standard",
 			canUse = true,
 			canRemove = svItems[name].canRemove,
-			desc = svItems[name].desc
+			desc = svItems[name].desc,
+			group = svItems[name].group or 1,
 		})
 	end
-
 	NUIService.LoadInv()
 end
 
-InventoryService.removeItem = function (name, id, count)
+function InventoryService.removeItem(name, id, count)
 	if UserInventory[id] == nil then
 		return
 	end
@@ -41,7 +53,9 @@ InventoryService.removeItem = function (name, id, count)
 	local item = UserInventory[id]
 
 	if item ~= nil then
-		print("[^2removeItem^7] ^1Debug^7: Going to call Item:quitCount with amount = ^3" .. tonumber(count) .. "^7.")
+		if Config.Debug then
+			print("[^2removeItem^7] ^1Debug^7: Going to call Item:quitCount with amount = ^3" .. tonumber(count) .. "^7.")
+		end
 		item:quitCount(count)
 
 		if item:getCount() <= 0 then
@@ -52,7 +66,7 @@ InventoryService.removeItem = function (name, id, count)
 	end
 end
 
-InventoryService.receiveWeapon = function (id, propietary, name, ammos)
+function InventoryService.receiveWeapon(id, propietary, name, ammos)
 	local weaponAmmo = {}
 
 	for type, amount in pairs(ammos) do
@@ -69,39 +83,38 @@ InventoryService.receiveWeapon = function (id, propietary, name, ammos)
 			ammo = weaponAmmo,
 			used = false,
 			used2 = false,
-			desc = Utils.GetWeaponDesc(name)
+			desc = Utils.GetWeaponDesc(name),
+			group = 5
 		})
 
 		UserWeapons[newWeapon:getId()] = newWeapon
 		NUIService.LoadInv()
 	end
-
 end
 
-InventoryService.onSelectedCharacter = function (charId)
+function InventoryService.onSelectedCharacter(charId)
 	SetNuiFocus(false, false)
-	SendNUIMessage({action= "hide"})
+	SendNUIMessage({ action = "hide" })
 	print("Loading Inventory")
 	TriggerServerEvent("vorpinventory:getItemsTable")
 	Wait(300)
 	TriggerServerEvent("vorpinventory:getInventory")
-	Wait(5000)
+	Wait(1000)
 	TriggerServerEvent("vorpCore:LoadAllAmmo")
-	Wait(2500)
+	Wait(1000)
 	print("ammo loaded")
 	TriggerEvent("vorpinventory:loaded")
 end
 
-InventoryService.processItems = function (items)
+function InventoryService.processItems(items)
 	svItems = {}
 	for _, item in pairs(items) do
 		svItems[item.item] = Item:New(item)
 	end
 end
 
-InventoryService.getLoadout = function (loadout)
+function InventoryService.getLoadout(loadout)
 	for _, weapon in pairs(loadout) do
-
 		local weaponAmmo = weapon.ammo
 
 		for type, amount in pairs(weaponAmmo) do
@@ -127,10 +140,11 @@ InventoryService.getLoadout = function (loadout)
 				desc = Utils.GetWeaponDesc(weapon.name),
 				currInv = weapon.curr_inv,
 				dropped = 0,
+				group = 5
 			})
-	
+
 			UserWeapons[newWeapon:getId()] = newWeapon
-	
+
 			if newWeapon:getUsed() then
 				Utils.useWeapon(newWeapon:getId())
 			end
@@ -138,35 +152,27 @@ InventoryService.getLoadout = function (loadout)
 	end
 end
 
-InventoryService.getInventory = function (inventory)
-	if inventory ~= nil and inventory ~= '' then
+function InventoryService.getInventory(inventory)
+	if inventory and inventory ~= '' then
 		UserInventory = {}
 		local inventoryItems = json.decode(inventory)
 
 		for _, item in pairs(inventoryItems) do
-			if svItems[item.item] ~= nil then
+			if svItems[item.item] then
 				local dbItem = svItems[item.item]
-				local itemAmount = tonumber(item.amount)
-				local itemLimit = tonumber(dbItem.limit)
-				local itemCreatedAt = item.created_at
-				local itemLabel = dbItem.label
-				local itemCanRemove = dbItem.canRemove
-				local itemType = dbItem.type
-				local itemCanUse = dbItem.canUse
-				local itemDefaultMetadata = dbItem.metadata
-				local itemDesc = dbItem.desc
 
 				local newItem = Item:New({
 					id = item.id,
-					count = itemAmount,
-					limit = itemLimit,
-					label = itemLabel,
+					count = tonumber(item.amount),
+					limit = tonumber(dbItem.limit),
+					label = dbItem.label,
 					name = item.item,
-					metadata = SharedUtils.MergeTables(itemDefaultMetadata, item.metadata),
-					type = itemType,
-					canUse = itemCanUse,
-					canRemove = itemCanRemove,
-					desc = itemDesc
+					metadata = SharedUtils.MergeTables(dbItem.metadata, item.metadata),
+					type = dbItem.type,
+					canUse = dbItem.canUse,
+					canRemove = dbItem.canRemove,
+					desc = dbItem.desc,
+					group = dbItem.group or 1,
 				})
 
 				UserInventory[item.id] = newItem

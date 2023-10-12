@@ -1,5 +1,6 @@
 _whitelist = {}
 
+local T = Translation[Lang].MessageOfSystem
 
 function AddUserToWhitelistById(id)
     _whitelist[id].GetEntry().setStatus(true)
@@ -39,7 +40,7 @@ function GetSteamID(src)
     if not src then
         return false
     end
-    
+
     local sid = GetPlayerIdentifiers(src)[1] or false
 
     if sid == false or sid:sub(1, 5) ~= "steam" then
@@ -48,10 +49,6 @@ function GetSteamID(src)
     return sid
 end
 
----comment
----@param source number
----@param id_type string
----@return nil | number
 local function GetIdentifier(source, id_type)
     if type(id_type) ~= "string" then return print('Invalid usage') end
 
@@ -63,9 +60,7 @@ local function GetIdentifier(source, id_type)
     return nil
 end
 
----comment
----@param src number
----@return boolean
+
 local function GetLicenseID(src)
     local sid = GetPlayerIdentifiers(src)[2] or false
     if (sid == false or sid:sub(1, 5) ~= "license") then
@@ -74,9 +69,7 @@ local function GetLicenseID(src)
     return sid
 end
 
----comment
----@param identifier any
----@return any
+
 function GetUserId(identifier)
     for k, v in pairs(_whitelist) do
         if v.GetEntry().getIdentifier() == identifier then
@@ -85,9 +78,6 @@ function GetUserId(identifier)
     end
 end
 
----comment
----@param identifier any
----@return number
 local function InsertIntoWhitelist(identifier)
     if GetUserId(identifier) then
         return GetUserId(identifier)
@@ -123,13 +113,13 @@ AddEventHandler("playerConnecting", function(playerName, setKickReason, deferral
     local IDs = GetIdentifier(_source, 'steam')
 
     if IDs == nil then
-        deferrals.done(Config.Langs.NoSteam)
+        deferrals.done(T.NoSteam)
         userEntering = false
         CancelEvent()
         return
     end
 
-    if _users[steamIdentifier] and not _usersLoading[identifier] then --Save and delete
+    if steamIdentifier and _users[steamIdentifier] and not _usersLoading[steamIdentifier] then --Save and delete
         _users[steamIdentifier].SaveUser()
         _users[steamIdentifier] = nil
     end
@@ -141,15 +131,15 @@ AddEventHandler("playerConnecting", function(playerName, setKickReason, deferral
             userEntering = true
         else
             playerWlId = InsertIntoWhitelist(steamIdentifier)
-            deferrals.done(Config.Langs.NoInWhitelist .. playerWlId)
-            setKickReason(Config.Langs.NoInWhitelist .. playerWlId)
+            deferrals.done(T.NoInWhitelist .. playerWlId)
+            setKickReason(T.NoInWhitelist .. playerWlId)
         end
     else
         userEntering = true
     end
 
     if userEntering then
-        deferrals.update(Config.Langs.LoadingUser)
+        deferrals.update(T.LoadingUser)
         LoadUser(_source, setKickReason, deferrals, steamIdentifier, GetLicenseID(_source))
     end
 

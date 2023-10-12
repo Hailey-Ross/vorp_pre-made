@@ -1,5 +1,4 @@
----@param player number
----@return table|nil
+
 local function _getUsedCharacter(player)
     local sid = GetSteamID(player)
 
@@ -18,8 +17,6 @@ local function _getUsedCharacter(player)
     return used_char
 end
 
----@param player number
----@return table|nil
 local function _getCharDetails(player)
     local used_char = _getUsedCharacter(player)
 
@@ -101,7 +98,15 @@ AddEventHandler('vorp:unwhitelistPlayer', function(id)
     RemoveUserFromWhitelistById(id)
 end)
 
+
 AddEventHandler('getCore', function(cb)
+    local ResourceName = GetCurrentResourceName()
+
+    if ResourceName ~= 'vorp_core' then
+        return print(
+            "^1[vorp_notifications] ^3WARNING ^0This resource is not named correctly, please change it to ^1'vorp_core'^0 to work properly.")
+    end
+
     local coreData = {}
 
     coreData.getUser = function(source)
@@ -132,7 +137,6 @@ AddEventHandler('getCore', function(cb)
 
     coreData.Error = function(text)
         print("^1ERROR: ^7" .. tostring(text) .. "^7")
-        TriggerClientEvent("vorp_core:LogError")
     end
 
     coreData.Success = function(text)
@@ -172,7 +176,7 @@ AddEventHandler('getCore', function(cb)
     coreData.NotifyAvanced = function(source, text, dict, icon, text_color, duration, quality, showquality)
         local _source = source
         TriggerClientEvent('vorp:ShowAdvancedRightNotification', _source, text, dict, icon, text_color, duration, quality
-            , showquality)
+        , showquality)
     end
 
     coreData.NotifyCenter = function(source, text, duration, color)
@@ -197,12 +201,21 @@ AddEventHandler('getCore', function(cb)
 
     coreData.NotifyUpdate = function(source, title, subtitle, duration)
         local _source = source
-        TriggerClientEvent('vorp:updatemissioNotify', title, subtitle, duration)
+        TriggerClientEvent('vorp:updatemissioNotify', _source, title, subtitle, duration)
+    end
+    
+    coreData.NotifyBasicTop = function(source, title, duration)
+        local _source = source
+        TriggerClientEvent('vorp:ShowBasicTopNotification', _source, title, duration)
     end
 
     coreData.NotifyWarning = function(source, title, msg, audioRef, audioName, duration)
         local _source = source
         TriggerClientEvent('vorp:warningNotify', _source, title, msg, audioRef, audioName, duration)
+    end
+    coreData.NotifyLeftRank = function(source, title, subtitle,dict,icon, duration, color)
+        local _source = source
+        TriggerClientEvent('vorp:LeftRank', _source, title, subtitle,dict,icon, duration,color)
     end
 
     coreData.dbUpdateAddTables = function(tbl)

@@ -1,81 +1,64 @@
----@alias sourceId string
----@alias itemId string
----@alias weaponId string
----@alias invId string
 
----@type table<invId, table<sourceId, table<itemId, Item>>|table<itemId, Item>>
-UsersInventories = {
-	default = {}
-}
+---@type table<string, Item> contains Database Server items
+ServerItems = {}
+---@type table<string, table<number, Weapon>> contain users weapons
+UsersWeapons = { default = {} }
 
----@type table<invId, table<weaponId, Weapon>>
-UsersWeapons = {
-	default = {}
-}
----@type table<string, Item>
-svItems = {}
+--- load all player weapons
+---@param db_weapon table
+local function loadAllWeapons(db_weapon)
+	local ammo = json.decode(db_weapon.ammo)
+	local comp = json.decode(db_weapon.components)
 
+	if db_weapon.dropped == 0 then
+		local weapon = Weapon:New({
+			id = db_weapon.id,
+			propietary = db_weapon.identifier,
+			name = db_weapon.name,
+			ammo = ammo,
+			components = comp,
+			used = false,
+			used2 = false,
+			charId = db_weapon.charidentifier,
+			currInv = db_weapon.curr_inv,
+			dropped = db_weapon.dropped,
+			group = 5,
+		})
 
-function LoadDatabase(charid)
-	exports.oxmysql:execute('SELECT * FROM loadout ', {}, function(result)
-		if next(result) then
-			for _, db_weapon in pairs(result) do
-				if tonumber(charid) == tonumber(db_weapon.charidentifier) then
-					local ammo = json.decode(db_weapon.ammo)
-					local comp = json.decode(db_weapon.components)
-					local charId = nil
-					local used = false
-					local used2 = false
+		if not UsersWeapons[db_weapon.curr_inv] then
+			UsersWeapons[db_weapon.curr_inv] = {}
+		end
 
-					if db_weapon.charidentifier ~= nil then
-						charId = db_weapon.charidentifier
-					end
+		UsersWeapons[db_weapon.curr_inv][weapon:getId()] = weapon
+	else
+		DBService.deleteAsync('DELETE FROM loadout WHERE id = @id', { id = db_weapon.id }, function() end)
+	end
+end
 
-					if db_weapon.used == 1 then
-						used = true
-					end
+--- load player default inventory weapons
+---@param source number
+---@param character table character table data
+local function loadPlayerWeapons(source, character)
+	local _source = source
 
-					if db_weapon.used2 == 1 then
-						used2 = true
-					end
-
-					if db_weapon.dropped == 0 then
-						local weapon = Weapon:New({
-							id = db_weapon.id,
-							propietary = db_weapon.identifier,
-							name = db_weapon.name,
-							ammo = ammo,
-							components = comp,
-							used = used,
-							used2 = used2,
-							charId = charId,
-							currInv = db_weapon.curr_inv,
-							dropped = db_weapon.dropped
-						})
-
-						if UsersWeapons[db_weapon.curr_inv] == nil then
-							UsersWeapons[db_weapon.curr_inv] = {}
-						end
-
-						UsersWeapons[db_weapon.curr_inv][weapon:getId()] = weapon
+	DBService.queryAsync('SELECT * FROM loadout WHERE charidentifier = ? ', { character.charIdentifier },
+		function(result)
+			if next(result) then
+				for _, db_weapon in pairs(result) do
+					if db_weapon.charidentifier and db_weapon.curr_inv == "default" then -- only load default inventory
+						loadAllWeapons(db_weapon)
 					end
 				end
 			end
-		end
-	end)
+		end)
 end
 
--- load weapons only for the character that its joining
-RegisterNetEvent("vorp:SelectedCharacter", function(source, character)
-	local charid = character.charIdentifier
-	LoadDatabase(charid)
-end)
 
--- load all items from database
-Citizen.CreateThread(function()
-	exports.oxmysql:execute('SELECT * FROM items', {}, function(result)
-		if next(result) ~= nil then
-			for _, db_item in pairs(result) do
+MySQL.ready(function()
+	-- load all items from databse
+	DBService.queryAsync("SELECT * FROM items", {}, function(result)
+		for _, db_item in pairs(result) do
+			if db_item.id  then
 				local item = Item:New({
 					id = db_item.id,
 					item = db_item.item,
@@ -85,10 +68,32 @@ Citizen.CreateThread(function()
 					type = db_item.type,
 					canUse = db_item.usable,
 					canRemove = db_item.can_remove,
-					desc = db_item.desc
+					desc = db_item.desc,
+					group = db_item.groupId or 1
 				})
-				svItems[item.item] = item
+				ServerItems[item.item] = item
+			end
+		end
+	end)
+
+	--load all secondary weapons from database
+	DBService.queryAsync("SELECT * FROM loadout", {}, function(result)
+		for _, db_weapon in pairs(result) do
+			if db_weapon.curr_inv ~= "default" then
+				loadAllWeapons(db_weapon)
 			end
 		end
 	end)
 end)
+
+-- on player select character event
+RegisterNetEvent("vorp:SelectedCharacter", loadPlayerWeapons)
+
+-- reload on script restart
+if Config.DevMode then
+	RegisterNetEvent("DEV:loadweapons", function()
+		local _source = source
+		local character = Core.getUser(_source).getUsedCharacter
+		loadPlayerWeapons(_source, character)
+	end)
+end
